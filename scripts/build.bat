@@ -33,9 +33,7 @@ set INCLUDES=-Isrc ^
 set DEFINES=-D_CONSOLE -DIMGUI_DEFINE_MATH_OPERATORS -DCURL_STATICLIB -D_WIN32_WINNT=0x0a00
 
 :: change -ld3dcompiler_47 to a different version if needed
-set LIBS=src/external/lib/libcurl.lib ^
-         src/external/lib/zlib.lib ^
-         -ld3d11 -ldxgi -ld3dcompiler_47 -ldwmapi -lgdi32 -luser32 -limm32 -lole32 -lshell32 ^
+set LIBS=         -ld3d11 -ldxgi -ld3dcompiler_47 -ldwmapi -lgdi32 -luser32 -limm32 -lole32 -lshell32 ^
          -lws2_32 -lwldap32 -lcrypt32 -lnormaliz -ladvapi32 -lbcrypt
 
 set SRCS=scripts\msvc\compatibility.cpp ^
@@ -74,9 +72,8 @@ set SRCS=scripts\msvc\compatibility.cpp ^
          src/gui/frontend/theme/Theme.cpp ^
          src/gui/renderer/Renderer.cpp ^
          src/gui/renderer/window/Window.cpp ^
-         src/main.cpp ^
-         src/updater/http/HttpHelper.cpp ^
-         src/updater/Updater.cpp
+         src/main.cpp
+
 
 set SOLIS_C=src/external/Solis/runtime/solis.c ^
             src/external/Solis/runtime/solis_std.c ^
