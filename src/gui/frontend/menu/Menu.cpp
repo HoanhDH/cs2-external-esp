@@ -291,13 +291,15 @@ void Menu::RenderImpl() {
 				}
 				else if (active_tab == Tab::TRIGGER_DEMO)
 				{
-					ImGui::TextUnformatted("Trigger configuration - local demo");
+					ImGui::TextUnformatted("Trigger Demo - local preview");
 					ImGui::Separator();
 					ImGui::Checkbox("Enable prototype", &cfg::trigger_demo::enabled);
-					ImGui::TextDisabled("Does not interact with CS2 or generate mouse clicks.");
+					ImGui::TextDisabled("Preview only: no CS2 target scan or automatic mouse clicks.");
 					const char* zones[] = { "Head", "Body", "Head + Body" };
 					ImGui::Combo("Target zone", &cfg::trigger_demo::zone, zones, IM_ARRAYSIZE(zones));
-					ImGui::SliderInt("Cooldown (ms)", &cfg::trigger_demo::cooldown_ms, 50, 1000);
+					const char* modes[] = { "Hold", "Toggle" };
+					ImGui::Combo("Activation mode", &cfg::trigger_demo::activation_mode, modes, IM_ARRAYSIZE(modes));
+					ImGui::SliderInt("Delay (ms)", &cfg::trigger_demo::delay_ms, 0, 500);
 
 					static bool capturing_key = false;
 					const ImGuiKey current_key = static_cast<ImGuiKey>(cfg::trigger_demo::hotkey);
@@ -315,22 +317,49 @@ void Menu::RenderImpl() {
 							break;
 						}
 					}
-					const bool key_held = !capturing_key && ImGui::IsKeyDown(static_cast<ImGuiKey>(cfg::trigger_demo::hotkey));
-					ImGui::Text("Key state: %s", key_held ? "Pressed" : "Released");
+					static bool toggle_active = false;
+					static int previous_mode = 0;
+					static int previous_hotkey = static_cast<int>(ImGuiKey_F6);
+					static int demo_count = 0;
+					static double next_demo_time = 0.0;
+					if (!cfg::trigger_demo::enabled || previous_mode != cfg::trigger_demo::activation_mode ||
+						previous_hotkey != cfg::trigger_demo::hotkey) {
+						toggle_active = false;
+						next_demo_time = 0.0;
+					}
+					previous_mode = cfg::trigger_demo::activation_mode;
+					previous_hotkey = cfg::trigger_demo::hotkey;
+					const ImGuiKey active_key = static_cast<ImGuiKey>(cfg::trigger_demo::hotkey);
+					const bool key_held = !capturing_key && ImGui::IsKeyDown(active_key);
+					const bool key_pressed = !capturing_key && ImGui::IsKeyPressed(active_key, false);
+					if (cfg::trigger_demo::enabled && cfg::trigger_demo::activation_mode == 1 && key_pressed)
+						toggle_active = !toggle_active;
+					const bool active = cfg::trigger_demo::enabled &&
+						(cfg::trigger_demo::activation_mode == 0 ? key_held : toggle_active);
+					ImGui::Text("Key state: %s | Mode: %s", key_held ? "Pressed" : "Released", active ? "Active" : "Inactive");
+
 					ImGui::Separator();
 					ImGui::TextUnformatted("Practice preview (simulated coordinates)");
 					static float sample_x = 0.5f;
 					static float sample_y = 0.5f;
 					ImGui::SliderFloat("Dummy X", &sample_x, 0.0f, 1.0f);
 					ImGui::SliderFloat("Dummy Y", &sample_y, 0.0f, 1.0f);
-					// Move a dummy vertically and preview head/body hit regions independently.
 					const float dx = std::abs(sample_x - 0.5f);
 					const bool head_match = dx < 0.05f && std::abs((sample_y - 0.12f) - 0.5f) < 0.05f;
 					const bool body_match = dx < 0.10f && std::abs((sample_y + 0.07f) - 0.5f) < 0.12f;
 					const bool zone_match = cfg::trigger_demo::zone == 0 ? head_match :
 						(cfg::trigger_demo::zone == 1 ? body_match : (head_match || body_match));
-					const bool matching = cfg::trigger_demo::enabled && zone_match && key_held;
-					ImGui::Text("Demo status: %s", matching ? "MATCH (preview only)" : "Idle");
+					const double now = ImGui::GetTime();
+					if (!active || !zone_match) {
+						next_demo_time = now;
+					} else if (now >= next_demo_time) {
+						++demo_count; // Simulated event counter; never emits mouse or keyboard input.
+						next_demo_time = now + cfg::trigger_demo::delay_ms / 1000.0;
+					}
+					ImGui::Text("Demo status: %s", active && zone_match ? "MATCH (preview only)" : "Idle");
+					ImGui::Text("Simulated activations: %d", demo_count);
+					if (ImGui::Button("Reset counter"))
+						demo_count = 0;
 				}
 				else if (active_tab == Tab::SETTINGS)
 				{
