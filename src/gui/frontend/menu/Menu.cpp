@@ -296,17 +296,17 @@ void Menu::RenderImpl() {
 					ImGui::TextUnformatted("Trigger Demo - local preview");
 					ImGui::Separator();
 					ImGui::Checkbox("Enable prototype", &cfg::trigger_demo::enabled);
-					ImGui::Checkbox("Enable simulated M event on bot alignment", &cfg::trigger_demo::live_head_feedback);
+					ImGui::Checkbox("Show FIRED on bot head / body alignment", &cfg::trigger_demo::live_head_feedback);
 					ImGui::Checkbox("Require game-spotted signal (approximate)", &cfg::trigger_demo::require_spotted);
 					ImGui::TextDisabled("Spotted is NOT proof of clear line of sight through walls.");
 					ImGui::TextDisabled("The game may mark bots spotted by other players.");
-					ImGui::TextDisabled("Internal counter only: does not press M or control the game.");
+					ImGui::TextDisabled("Read-only visual alert; never clicks or fires a weapon.");
 					const char* zones[] = { "Head", "Body", "Head + Body" };
 					ImGui::Combo("Target zone", &cfg::trigger_demo::zone, zones, IM_ARRAYSIZE(zones));
 					const char* modes[] = { "Hold", "Toggle" };
 					ImGui::Combo("Activation mode", &cfg::trigger_demo::activation_mode, modes, IM_ARRAYSIZE(modes));
-					ImGui::SliderInt("Simulated M delay (ms)", &cfg::trigger_demo::delay_ms, 0, 500);
-					ImGui::TextDisabled("Wait before the internal M event (0 = immediate).");
+					ImGui::SliderInt("FIRED display delay (ms)", &cfg::trigger_demo::delay_ms, 0, 500);
+					ImGui::TextDisabled("Wait before showing FIRED (0 = immediate).");
 
 					static bool capturing_key = false;
 					const ImGuiKey current_key = static_cast<ImGuiKey>(cfg::trigger_demo::hotkey);
@@ -346,7 +346,7 @@ void Menu::RenderImpl() {
 					static double demo_due_time = 0.0;
 					static bool demo_pending = false;
 					static bool previous_demo_match = false;
-					static double demo_m_until = 0.0;
+					static double demo_fired_until = 0.0;
 					if (!cfg::trigger_demo::enabled || previous_mode != cfg::trigger_demo::activation_mode ||
 						previous_hotkey != cfg::trigger_demo::hotkey) {
 						toggle_active = false;
@@ -364,8 +364,8 @@ void Menu::RenderImpl() {
 					const bool active = cfg::trigger_demo::enabled &&
 						(cfg::trigger_demo::activation_mode == 0 ? key_held : toggle_active);
 					ImGui::Text("Key state: %s | Mode: %s", key_held ? "Pressed" : "Released", active ? "Active" : "Inactive");
-					ImGui::TextDisabled("The simulated M event uses the hotkey when CS2 is focused.");
-					ImGui::TextDisabled("Menu preview is separate from the game-data event counter.");
+					ImGui::TextDisabled("Live FIRED alert uses the assigned hotkey when CS2 is focused.");
+					ImGui::TextDisabled("This menu preview is separate from the in-game alert.");
 
 					ImGui::Separator();
 					ImGui::TextUnformatted("Practice preview (simulated coordinates)");
@@ -395,25 +395,13 @@ void Menu::RenderImpl() {
 							demo_fired_until = now + 0.45;
 						}
 					}
-					ImGui::Text("Demo status: %s", demo_pending ? "WAITING (event delay)" :
-						(now < demo_fired_until ? "M EVENT (preview only)" :
+					ImGui::Text("Demo status: %s", demo_pending ? "WAITING (display delay)" :
+						(now < demo_fired_until ? "FIRED (preview only)" :
 						(active && zone_match ? "MATCH (preview only)" : "Idle")));
-					ImGui::Text("Preview M events: %d", demo_count);
+					ImGui::Text("Simulated activations: %d", demo_count);
 					if (ImGui::Button("Reset counter"))
 						demo_count = 0;
 
-					ImGui::Separator();
-					ImGui::TextUnformatted("Live simulated M events (no keyboard output)");
-					ImGui::Text("Live M event count: %d", cfg::trigger_demo::simulated_m_count);
-					if (cfg::trigger_demo::simulated_m_last_at >= 0.0)
-						ImGui::Text("Last M event at: %.2f s", cfg::trigger_demo::simulated_m_last_at);
-					else
-						ImGui::TextDisabled("Last M event: none");
-					if (ImGui::Button("Reset live M event count")) {
-						cfg::trigger_demo::simulated_m_count = 0;
-						cfg::trigger_demo::simulated_m_last_at = -1.0;
-					}
-					ImGui::TextDisabled("Events are logged internally, never sent to CS2.");
 					ImGui::Separator();
 					ImGui::TextUnformatted("Raycast laboratory (simulated obstacle)");
 					ImGui::TextDisabled("Uses test geometry, NOT collision data from CS2.");
