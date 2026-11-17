@@ -35,7 +35,6 @@ private:
 
     void RenderBomb();
     void RenderRadar();
-    void RenderNotice();
     void RenderEspStatus();
     void RenderWatermark();
     void RenderBotHeadFeedback();
