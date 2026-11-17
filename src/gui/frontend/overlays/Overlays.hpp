@@ -38,6 +38,7 @@ private:
     void RenderNotice();
     void RenderEspStatus();
     void RenderWatermark();
+    void RenderBotHeadFeedback();
     void RenderSpeedChart();
    // void RenderDebugWindow();
     void RenderSpectatorList();

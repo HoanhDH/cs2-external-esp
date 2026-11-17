@@ -106,9 +106,10 @@ namespace cfg {
 		}
 	}
 
-	// Local-only UI prototype. Never reads game targets or synthesizes input.
+	// Read-only visual test: recognizes bot head alignment, never synthesizes input.
 	namespace trigger_demo {
 		inline bool enabled = false;
+		inline bool live_head_feedback = true;
 		inline int hotkey = static_cast<int>(ImGuiKey_F6);
 		inline int zone = 0; // 0: head, 1: body, 2: either
 		inline int activation_mode = 0; // 0: Hold, 1: Toggle
