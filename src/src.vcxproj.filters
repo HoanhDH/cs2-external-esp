@@ -102,12 +102,6 @@
     <ClCompile Include="gui\frontend\overlays\Overlays.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="updater\Updater.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="updater\http\HttpHelper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="core\engine\classes\Bomb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -378,12 +372,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gui\frontend\overlays\Overlays.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="updater\Updater.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="updater\http\HttpHelper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="core\engine\classes\Bomb.hpp">
