@@ -20,7 +20,6 @@
 
 #include <iostream>
 
-#include "updater/Updater.hpp"
 #include "core/engine/Engine.hpp"
 #include "gui/renderer/Renderer.hpp"
 
@@ -37,12 +36,6 @@ int main()
     // Needs to be ran as ADMINISTRATOR
     if (!SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS))
         LOGF(WARNING, "Could not set application process priority to HIGH");
-
-    if (!Updater::Init() || !Updater::Process()) {
-        LOGF(FATAL, "Updater failed to run, the application has not verified its status, execution its not recommended");
-        LOGF(INFO, "Press any key to ignore and continue execution...");
-        std::cin.get();
-    }
 
     if (!Engine::Init()) {
         LOGF(FATAL, "Engine failed to initialize, cannot continue execution");
