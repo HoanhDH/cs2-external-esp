@@ -110,6 +110,7 @@ namespace cfg {
 	namespace trigger_demo {
 		inline bool enabled = false;
 		inline bool live_head_feedback = true;
+		inline bool require_spotted = false; // Heuristic game spotted flag, NOT line of sight.
 		inline int hotkey = static_cast<int>(ImGuiKey_F6);
 		inline int zone = 0; // 0: head, 1: body, 2: either
 		inline int activation_mode = 0; // 0: Hold, 1: Toggle
