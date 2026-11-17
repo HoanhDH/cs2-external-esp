@@ -140,6 +140,10 @@ void Overlays::RenderBotHeadFeedback() {
         if (!player.bot || !player.alive || player.localplayer ||
             player.team == local.team || (player.team != 2 && player.team != 3))
             continue;
+        // This flag is only a game-provided detection heuristic.
+        // It is NOT a raycast and does NOT prove an unobstructed line of sight.
+        if (cfg::trigger_demo::require_spotted && !player.spotted)
+            continue;
         if (player.bone_list.size() <= static_cast<size_t>(bone_index::chest))
             continue;
 
