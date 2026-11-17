@@ -3,6 +3,8 @@
 #include "updater/Updater.hpp"
 #include "gui/renderer/Renderer.hpp" // Circular dependency
 #include "gui/frontend/menu/Menu.hpp" // Circular dependency
+#include "gui/frontend/menu/TriggerHotkey.hpp"
+#include "core/engine/Engine.hpp"
 #include "assets/fonts/WeaponIcons.h"
 
 bool Overlays::Init() {
@@ -65,81 +67,126 @@ void Overlays::RenderImpl() {
 // Visual-only test: display a short-lived label when the center of the screen
 // enters the projected head region of an enemy bot. No aiming, input, or shooting.
 void Overlays::RenderBotHeadFeedback() {
-    static bool previous_head_alignment = false;
+    // This is a read-only on-screen training alert; it never sends game input.
+    static bool was_key_held = false;
+    static bool toggled = false;
+    static bool previous_match = false;
+    static int previous_hotkey = -1;
+    static int previous_mode = -1;
     static double banner_until = 0.0;
-    static double last_trigger_at = -1000.0;
+    static double last_alert_at = -1000.0;
 
     const double now = ImGui::GetTime();
     const bool enabled = cfg::enabled && cfg::trigger_demo::enabled &&
         cfg::trigger_demo::live_head_feedback;
+    const int mode = cfg::trigger_demo::activation_mode;
+    const int key = cfg::trigger_demo::hotkey;
 
-    bool head_alignment = false;
+    if (!enabled || key != previous_hotkey || mode != previous_mode) {
+        toggled = false;
+        previous_match = false;
+        banner_until = 0.0;
+    }
+    previous_hotkey = key;
+    previous_mode = mode;
+
+    // Poll the game-focused keyboard/mouse, NOT menu ImGui input.
+    // Menu open or another window in foreground suspends alerts.
+    const auto process = Engine::GetProcess();
+    const bool in_game = process && process->hwnd_ &&
+        GetForegroundWindow() == process->hwnd_ && !Renderer::IsOpen();
+    const bool held = in_game && enabled && trigger_hotkey::IsHeld(key);
+    const bool pressed = held && !was_key_held;
+    was_key_held = held;
+
+    if (!in_game || !enabled) {
+        previous_match = false;
+        banner_until = 0.0;
+        // Toggle defaults to off when game loses focus.
+        toggled = false;
+        return;
+    }
+    if (mode == 1 && pressed)
+        toggled = !toggled;
+    const bool active = mode == 0 ? held : toggled;
+    if (!active) {
+        previous_match = false;
+        banner_until = 0.0;
+        return;
+    }
+
     const ImVec2 screen = ImGui::GetIO().DisplaySize;
+    if (screen.x <= 0.f || screen.y <= 0.f)
+        return;
 
-    if (enabled && !Renderer::IsOpen() && screen.x > 0.f && screen.y > 0.f) {
-        auto snapshot = Cache::CopySnapshot();
-        const auto& local = snapshot.local;
+    const auto snapshot = Cache::CopySnapshot();
+    const auto& local = snapshot.local;
+    if (!local.alive || (local.team != 2 && local.team != 3)) {
+        previous_match = false;
+        banner_until = 0.0;
+        return;
+    }
 
-        if (local.alive && (local.team == 2 || local.team == 3)) {
-            auto matrix = snapshot.game.view_matrix;
-            const Vec2_t center{ screen.x * 0.5f, screen.y * 0.5f };
+    auto matrix = snapshot.game.view_matrix;
+    const Vec2_t center{screen.x * 0.5f, screen.y * 0.5f};
+    bool matched = false;
 
-            for (const auto& player : snapshot.players) {
-                // Restrict to enemy bots who are still alive.
-                if (!player.bot || !player.alive || player.localplayer)
-                    continue;
-                if (player.team != 2 && player.team != 3)
-                    continue;
-                if (player.team == local.team ||
-                    player.bone_list.size() <= static_cast<size_t>(bone_index::head))
-                    continue;
+    for (const auto& player : snapshot.players) {
+        if (!player.bot || !player.alive || player.localplayer ||
+            player.team == local.team || (player.team != 2 && player.team != 3))
+            continue;
+        if (player.bone_list.size() <= static_cast<size_t>(bone_index::chest))
+            continue;
 
-                Vec2_t projected_head;
-                Vec2_t projected_neck;
-                if (!matrix.wts(player.bone_list[bone_index::head].pos, screen, projected_head))
-                    continue;
-                if (!matrix.wts(player.bone_list[bone_index::neck].pos, screen, projected_neck))
-                    continue;
+        Vec2_t head, neck, chest, pelvis;
+        if (!matrix.wts(player.bone_list[bone_index::head].pos, screen, head) ||
+            !matrix.wts(player.bone_list[bone_index::neck].pos, screen, neck) ||
+            !matrix.wts(player.bone_list[bone_index::chest].pos, screen, chest) ||
+            !matrix.wts(player.bone_list[bone_index::pelvis].pos, screen, pelvis))
+            continue;
 
-                const float dx = projected_head.x - center.x;
-                const float dy = projected_head.y - center.y;
-                const float head_neck_dx = projected_head.x - projected_neck.x;
-                const float head_neck_dy = projected_head.y - projected_neck.y;
+        const float head_neck_dx = head.x - neck.x;
+        const float head_neck_dy = head.y - neck.y;
+        const float head_radius = std::clamp(
+            std::sqrt(head_neck_dx * head_neck_dx + head_neck_dy * head_neck_dy) * 0.7f,
+            4.f, 18.f);
+        const float head_dx = head.x - center.x, head_dy = head.y - center.y;
+        const bool head_match = head_dx * head_dx + head_dy * head_dy <= head_radius * head_radius;
 
-                // Adaptive screen-space approximation of the head region.
-                const float head_neck_sq = head_neck_dx * head_neck_dx +
-                    head_neck_dy * head_neck_dy;
-                const float radius = std::clamp(std::sqrt(head_neck_sq) * 0.7f, 4.f, 18.f);
+        // Approximate torso by a rectangle between chest and pelvis.
+        const float height = std::abs(pelvis.y - head.y);
+        const float torso_cx = (chest.x + pelvis.x) * 0.5f;
+        const float torso_cy = (chest.y + pelvis.y) * 0.5f;
+        const float torso_half_width = std::clamp(height * 0.17f, 8.f, 50.f);
+        const float torso_half_height = std::clamp(std::abs(pelvis.y - chest.y) * 0.5f, 8.f, 75.f);
+        const bool body_match =
+            std::abs(center.x - torso_cx) <= torso_half_width &&
+            std::abs(center.y - torso_cy) <= torso_half_height;
 
-                if (dx * dx + dy * dy <= radius * radius) {
-                    head_alignment = true;
-                    break;
-                }
-            }
+        if ((cfg::trigger_demo::zone == 0 && head_match) ||
+            (cfg::trigger_demo::zone == 1 && body_match) ||
+            (cfg::trigger_demo::zone == 2 && (head_match || body_match))) {
+            matched = true;
+            break;
         }
     }
 
-    // Only show a new event when the crosshair *enters* a head region.
-    // Delay controls a visual cooldown, never an input event.
-    if (head_alignment && !previous_head_alignment &&
-        now - last_trigger_at >= cfg::trigger_demo::delay_ms / 1000.0) {
+    // Rising edge, once per entry into a matching region.
+    if (matched && !previous_match &&
+        now - last_alert_at >= cfg::trigger_demo::delay_ms / 1000.0) {
         banner_until = now + 0.45;
-        last_trigger_at = now;
+        last_alert_at = now;
     }
-    previous_head_alignment = head_alignment;
-
-    if (!enabled || Renderer::IsOpen() || now >= banner_until)
+    previous_match = matched;
+    if (now >= banner_until)
         return;
 
     const char* label = "FIRED";
     auto* draw = ImGui::GetForegroundDrawList();
     const ImVec2 text_size = ImGui::CalcTextSize(label);
-    const ImVec2 text_pos{
-        screen.x * 0.5f - text_size.x * 0.5f,
-        screen.y * 0.5f + 42.f
-    };
-    const ImVec2 box_a{ text_pos.x - 14.f, text_pos.y - 7.f };
-    const ImVec2 box_b{ text_pos.x + text_size.x + 14.f, text_pos.y + text_size.y + 7.f };
+    const ImVec2 text_pos{screen.x * 0.5f - text_size.x * 0.5f, screen.y * 0.5f + 42.f};
+    const ImVec2 box_a{text_pos.x - 14.f, text_pos.y - 7.f};
+    const ImVec2 box_b{text_pos.x + text_size.x + 14.f, text_pos.y + text_size.y + 7.f};
     draw->AddRectFilled(box_a, box_b, IM_COL32(10, 10, 10, 205), 6.f);
     draw->AddRect(box_a, box_b, IM_COL32(255, 190, 40, 230), 6.f);
     draw->AddText(text_pos, IM_COL32(255, 212, 75, 255), label);

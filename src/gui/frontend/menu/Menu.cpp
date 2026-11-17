@@ -3,6 +3,7 @@
 #include "core/engine/cache/Cache.hpp"
 #include "gui/renderer/Renderer.hpp" // Circular dependency
 #include "gui/renderer/window/Window.hpp" // Circular dependency
+#include "gui/frontend/menu/TriggerHotkey.hpp"
 #include "assets/fonts/Icons.h";
 
 
@@ -294,7 +295,7 @@ void Menu::RenderImpl() {
 					ImGui::TextUnformatted("Trigger Demo - local preview");
 					ImGui::Separator();
 					ImGui::Checkbox("Enable prototype", &cfg::trigger_demo::enabled);
-					ImGui::Checkbox("Show FIRED on bot head alignment", &cfg::trigger_demo::live_head_feedback);
+					ImGui::Checkbox("Show FIRED on bot head / body alignment", &cfg::trigger_demo::live_head_feedback);
 					ImGui::TextDisabled("Read-only visual alert; never clicks or fires a weapon.");
 					const char* zones[] = { "Head", "Body", "Head + Body" };
 					ImGui::Combo("Target zone", &cfg::trigger_demo::zone, zones, IM_ARRAYSIZE(zones));
@@ -309,13 +310,28 @@ void Menu::RenderImpl() {
 					ImGui::SameLine();
 					ImGui::Text("%s", ImGui::GetKeyName(current_key));
 					if (capturing_key) {
-						for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_NamedKey_END; ++k) {
-							const auto key = static_cast<ImGuiKey>(k);
-							if (!ImGui::IsKeyPressed(key, false)) continue;
-							if (key != ImGuiKey_Escape && key != ImGuiKey_Insert && key != ImGuiKey_End)
-								cfg::trigger_demo::hotkey = k;
+						if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
 							capturing_key = false;
-							break;
+						} else if (ImGui::IsMouseClicked(3)) {
+							cfg::trigger_demo::hotkey = static_cast<int>(ImGuiKey_MouseX1);
+							capturing_key = false;
+						} else if (ImGui::IsMouseClicked(4)) {
+							cfg::trigger_demo::hotkey = static_cast<int>(ImGuiKey_MouseX2);
+							capturing_key = false;
+						} else {
+							for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_NamedKey_END; ++k) {
+								const auto key = static_cast<ImGuiKey>(k);
+								if (k >= static_cast<int>(ImGuiKey_MouseLeft) &&
+									k <= static_cast<int>(ImGuiKey_MouseWheelY))
+									continue;
+								if (!ImGui::IsKeyPressed(key, false)) continue;
+								if (key == ImGuiKey_Insert || key == ImGuiKey_End ||
+									key == ImGuiKey_RightShift || !trigger_hotkey::ToVirtualKey(key))
+									continue;
+								cfg::trigger_demo::hotkey = k;
+								capturing_key = false;
+								break;
+							}
 						}
 					}
 					static bool toggle_active = false;
@@ -338,6 +354,8 @@ void Menu::RenderImpl() {
 					const bool active = cfg::trigger_demo::enabled &&
 						(cfg::trigger_demo::activation_mode == 0 ? key_held : toggle_active);
 					ImGui::Text("Key state: %s | Mode: %s", key_held ? "Pressed" : "Released", active ? "Active" : "Inactive");
+					ImGui::TextDisabled("Live alert uses the assigned hotkey when CS2 is focused.");
+					ImGui::TextDisabled("This menu preview is separate from the in-game alert.");
 
 					ImGui::Separator();
 					ImGui::TextUnformatted("Practice preview (simulated coordinates)");
