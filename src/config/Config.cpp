@@ -127,7 +127,8 @@ bool Config::ReadImpl() {
 			cfg::trigger_demo::enabled = demo.value("enabled", false);
 			cfg::trigger_demo::hotkey = std::clamp(demo.value("hotkey", static_cast<int>(ImGuiKey_F6)), static_cast<int>(ImGuiKey_NamedKey_BEGIN), static_cast<int>(ImGuiKey_NamedKey_END) - 1);
 			cfg::trigger_demo::zone = std::clamp(demo.value("zone", 0), 0, 2);
-			cfg::trigger_demo::cooldown_ms = std::clamp(demo.value("cooldown_ms", 150), 50, 1000);
+			cfg::trigger_demo::activation_mode = std::clamp(demo.value("activation_mode", 0), 0, 1);
+			cfg::trigger_demo::delay_ms = std::clamp(demo.value("delay_ms", demo.value("cooldown_ms", 150)), 0, 500);
 		}
 
 		// utils
@@ -245,7 +246,8 @@ bool Config::WriteImpl() {
 	data["trigger_demo"]["enabled"] = cfg::trigger_demo::enabled;
 	data["trigger_demo"]["hotkey"] = cfg::trigger_demo::hotkey;
 	data["trigger_demo"]["zone"] = cfg::trigger_demo::zone;
-	data["trigger_demo"]["cooldown_ms"] = cfg::trigger_demo::cooldown_ms;
+	data["trigger_demo"]["activation_mode"] = cfg::trigger_demo::activation_mode;
+	data["trigger_demo"]["delay_ms"] = cfg::trigger_demo::delay_ms;
 
 	// utils
 	//data["utils"]["console"] = cfg::settings::console;
