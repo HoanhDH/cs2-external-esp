@@ -126,6 +126,7 @@ bool Config::ReadImpl() {
 			const auto& demo = data["trigger_demo"];
 			cfg::trigger_demo::enabled = demo.value("enabled", false);
 			cfg::trigger_demo::live_head_feedback = demo.value("live_head_feedback", true);
+			cfg::trigger_demo::require_spotted = demo.value("require_spotted", false);
 			cfg::trigger_demo::hotkey = std::clamp(demo.value("hotkey", static_cast<int>(ImGuiKey_F6)), static_cast<int>(ImGuiKey_NamedKey_BEGIN), static_cast<int>(ImGuiKey_NamedKey_END) - 1);
 			cfg::trigger_demo::zone = std::clamp(demo.value("zone", 0), 0, 2);
 			cfg::trigger_demo::activation_mode = std::clamp(demo.value("activation_mode", 0), 0, 1);
@@ -246,6 +247,7 @@ bool Config::WriteImpl() {
 
 	data["trigger_demo"]["enabled"] = cfg::trigger_demo::enabled;
 	data["trigger_demo"]["live_head_feedback"] = cfg::trigger_demo::live_head_feedback;
+	data["trigger_demo"]["require_spotted"] = cfg::trigger_demo::require_spotted;
 	data["trigger_demo"]["hotkey"] = cfg::trigger_demo::hotkey;
 	data["trigger_demo"]["zone"] = cfg::trigger_demo::zone;
 	data["trigger_demo"]["activation_mode"] = cfg::trigger_demo::activation_mode;
