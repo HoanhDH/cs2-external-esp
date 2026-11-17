@@ -74,7 +74,8 @@ void Overlays::RenderBotHeadFeedback() {
     static int previous_hotkey = -1;
     static int previous_mode = -1;
     static double banner_until = 0.0;
-    static double last_alert_at = -1000.0;
+    static bool alert_pending = false;
+    static double alert_due_at = 0.0;
 
     const double now = ImGui::GetTime();
     const bool enabled = cfg::enabled && cfg::trigger_demo::enabled &&
@@ -85,6 +86,7 @@ void Overlays::RenderBotHeadFeedback() {
     if (!enabled || key != previous_hotkey || mode != previous_mode) {
         toggled = false;
         previous_match = false;
+        alert_pending = false;
         banner_until = 0.0;
     }
     previous_hotkey = key;
@@ -101,6 +103,7 @@ void Overlays::RenderBotHeadFeedback() {
 
     if (!in_game || !enabled) {
         previous_match = false;
+        alert_pending = false;
         banner_until = 0.0;
         // Toggle defaults to off when game loses focus.
         toggled = false;
@@ -111,6 +114,7 @@ void Overlays::RenderBotHeadFeedback() {
     const bool active = mode == 0 ? held : toggled;
     if (!active) {
         previous_match = false;
+        alert_pending = false;
         banner_until = 0.0;
         return;
     }
@@ -123,6 +127,7 @@ void Overlays::RenderBotHeadFeedback() {
     const auto& local = snapshot.local;
     if (!local.alive || (local.team != 2 && local.team != 3)) {
         previous_match = false;
+        alert_pending = false;
         banner_until = 0.0;
         return;
     }
@@ -171,13 +176,20 @@ void Overlays::RenderBotHeadFeedback() {
         }
     }
 
-    // Rising edge, once per entry into a matching region.
-    if (matched && !previous_match &&
-        now - last_alert_at >= cfg::trigger_demo::delay_ms / 1000.0) {
-        banner_until = now + 0.45;
-        last_alert_at = now;
+    // Rising edge: queue one visual event when the crosshair enters a matching
+    // region. Delay is time BEFORE the FIRED label appears, not a cooldown.
+    if (matched && !previous_match && !alert_pending) {
+        alert_pending = true;
+        alert_due_at = now + std::clamp(cfg::trigger_demo::delay_ms, 0, 500) / 1000.0;
     }
     previous_match = matched;
+
+    // The scheduled label can appear after the crosshair moves away;
+    // releasing the activation key or closing the game cancels it.
+    if (alert_pending && now >= alert_due_at) {
+        alert_pending = false;
+        banner_until = now + 0.45;
+    }
     if (now >= banner_until)
         return;
 
