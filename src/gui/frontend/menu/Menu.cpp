@@ -296,6 +296,9 @@ void Menu::RenderImpl() {
 					ImGui::Separator();
 					ImGui::Checkbox("Enable prototype", &cfg::trigger_demo::enabled);
 					ImGui::Checkbox("Show FIRED on bot head / body alignment", &cfg::trigger_demo::live_head_feedback);
+					ImGui::Checkbox("Require game-spotted signal (approximate)", &cfg::trigger_demo::require_spotted);
+					ImGui::TextDisabled("Spotted is NOT proof of clear line of sight through walls.");
+					ImGui::TextDisabled("The game may mark bots spotted by other players.");
 					ImGui::TextDisabled("Read-only visual alert; never clicks or fires a weapon.");
 					const char* zones[] = { "Head", "Body", "Head + Body" };
 					ImGui::Combo("Target zone", &cfg::trigger_demo::zone, zones, IM_ARRAYSIZE(zones));
