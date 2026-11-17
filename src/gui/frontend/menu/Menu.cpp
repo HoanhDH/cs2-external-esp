@@ -301,7 +301,8 @@ void Menu::RenderImpl() {
 					ImGui::Combo("Target zone", &cfg::trigger_demo::zone, zones, IM_ARRAYSIZE(zones));
 					const char* modes[] = { "Hold", "Toggle" };
 					ImGui::Combo("Activation mode", &cfg::trigger_demo::activation_mode, modes, IM_ARRAYSIZE(modes));
-					ImGui::SliderInt("Delay (ms)", &cfg::trigger_demo::delay_ms, 0, 500);
+					ImGui::SliderInt("FIRED display delay (ms)", &cfg::trigger_demo::delay_ms, 0, 500);
+					ImGui::TextDisabled("Wait before showing FIRED (0 = immediate).");
 
 					static bool capturing_key = false;
 					const ImGuiKey current_key = static_cast<ImGuiKey>(cfg::trigger_demo::hotkey);
@@ -338,11 +339,16 @@ void Menu::RenderImpl() {
 					static int previous_mode = 0;
 					static int previous_hotkey = static_cast<int>(ImGuiKey_F6);
 					static int demo_count = 0;
-					static double next_demo_time = 0.0;
+					static double demo_due_time = 0.0;
+					static bool demo_pending = false;
+					static bool previous_demo_match = false;
+					static double demo_fired_until = 0.0;
 					if (!cfg::trigger_demo::enabled || previous_mode != cfg::trigger_demo::activation_mode ||
 						previous_hotkey != cfg::trigger_demo::hotkey) {
 						toggle_active = false;
-						next_demo_time = 0.0;
+						demo_pending = false;
+						previous_demo_match = false;
+						demo_fired_until = 0.0;
 					}
 					previous_mode = cfg::trigger_demo::activation_mode;
 					previous_hotkey = cfg::trigger_demo::hotkey;
@@ -369,13 +375,25 @@ void Menu::RenderImpl() {
 					const bool zone_match = cfg::trigger_demo::zone == 0 ? head_match :
 						(cfg::trigger_demo::zone == 1 ? body_match : (head_match || body_match));
 					const double now = ImGui::GetTime();
-					if (!active || !zone_match) {
-						next_demo_time = now;
-					} else if (now >= next_demo_time) {
-						++demo_count; // Simulated event counter; never emits mouse or keyboard input.
-						next_demo_time = now + cfg::trigger_demo::delay_ms / 1000.0;
+					if (!active) {
+						demo_pending = false;
+						previous_demo_match = false;
+						demo_fired_until = 0.0;
+					} else {
+						if (zone_match && !previous_demo_match && !demo_pending) {
+							demo_pending = true;
+							demo_due_time = now + cfg::trigger_demo::delay_ms / 1000.0;
+						}
+						previous_demo_match = zone_match;
+						if (demo_pending && now >= demo_due_time) {
+							++demo_count; // Visual simulation only, never emits mouse or keyboard input.
+							demo_pending = false;
+							demo_fired_until = now + 0.45;
+						}
 					}
-					ImGui::Text("Demo status: %s", active && zone_match ? "MATCH (preview only)" : "Idle");
+					ImGui::Text("Demo status: %s", demo_pending ? "WAITING (display delay)" :
+						(now < demo_fired_until ? "FIRED (preview only)" :
+						(active && zone_match ? "MATCH (preview only)" : "Idle")));
 					ImGui::Text("Simulated activations: %d", demo_count);
 					if (ImGui::Button("Reset counter"))
 						demo_count = 0;
