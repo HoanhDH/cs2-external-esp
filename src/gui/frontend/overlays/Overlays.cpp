@@ -43,6 +43,7 @@ void Overlays::RenderImpl() {
 
         RenderNotice();
         RenderEspStatus();
+        RenderBotHeadFeedback();
 
     #ifdef _DEBUG
     //    RenderDebugWindow();
@@ -59,6 +60,89 @@ void Overlays::RenderImpl() {
         RenderBomb();
     }
     ImGui::PopFont();
+}
+
+// Visual-only test: display a short-lived label when the center of the screen
+// enters the projected head region of an enemy bot. No aiming, input, or shooting.
+void Overlays::RenderBotHeadFeedback() {
+    static bool previous_head_alignment = false;
+    static double banner_until = 0.0;
+    static double last_trigger_at = -1000.0;
+
+    const double now = ImGui::GetTime();
+    const bool enabled = cfg::enabled && cfg::trigger_demo::enabled &&
+        cfg::trigger_demo::live_head_feedback;
+
+    bool head_alignment = false;
+    const ImVec2 screen = ImGui::GetIO().DisplaySize;
+
+    if (enabled && !Renderer::IsOpen() && screen.x > 0.f && screen.y > 0.f) {
+        auto snapshot = Cache::CopySnapshot();
+        const auto& local = snapshot.local;
+
+        if (local.alive && (local.team == 2 || local.team == 3)) {
+            auto matrix = snapshot.game.view_matrix;
+            const Vec2_t center{ screen.x * 0.5f, screen.y * 0.5f };
+
+            for (const auto& player : snapshot.players) {
+                // Restrict to enemy bots who are still alive.
+                if (!player.bot || !player.alive || player.localplayer)
+                    continue;
+                if (player.team != 2 && player.team != 3)
+                    continue;
+                if (player.team == local.team ||
+                    player.bone_list.size() <= static_cast<size_t>(bone_index::head))
+                    continue;
+
+                Vec2_t projected_head;
+                Vec2_t projected_neck;
+                if (!matrix.wts(player.bone_list[bone_index::head].pos, screen, projected_head))
+                    continue;
+                if (!matrix.wts(player.bone_list[bone_index::neck].pos, screen, projected_neck))
+                    continue;
+
+                const float dx = projected_head.x - center.x;
+                const float dy = projected_head.y - center.y;
+                const float head_neck_dx = projected_head.x - projected_neck.x;
+                const float head_neck_dy = projected_head.y - projected_neck.y;
+
+                // Adaptive screen-space approximation of the head region.
+                const float head_neck_sq = head_neck_dx * head_neck_dx +
+                    head_neck_dy * head_neck_dy;
+                const float radius = std::clamp(std::sqrt(head_neck_sq) * 0.7f, 4.f, 18.f);
+
+                if (dx * dx + dy * dy <= radius * radius) {
+                    head_alignment = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Only show a new event when the crosshair *enters* a head region.
+    // Delay controls a visual cooldown, never an input event.
+    if (head_alignment && !previous_head_alignment &&
+        now - last_trigger_at >= cfg::trigger_demo::delay_ms / 1000.0) {
+        banner_until = now + 0.45;
+        last_trigger_at = now;
+    }
+    previous_head_alignment = head_alignment;
+
+    if (!enabled || Renderer::IsOpen() || now >= banner_until)
+        return;
+
+    const char* label = "FIRED";
+    auto* draw = ImGui::GetForegroundDrawList();
+    const ImVec2 text_size = ImGui::CalcTextSize(label);
+    const ImVec2 text_pos{
+        screen.x * 0.5f - text_size.x * 0.5f,
+        screen.y * 0.5f + 42.f
+    };
+    const ImVec2 box_a{ text_pos.x - 14.f, text_pos.y - 7.f };
+    const ImVec2 box_b{ text_pos.x + text_size.x + 14.f, text_pos.y + text_size.y + 7.f };
+    draw->AddRectFilled(box_a, box_b, IM_COL32(10, 10, 10, 205), 6.f);
+    draw->AddRect(box_a, box_b, IM_COL32(255, 190, 40, 230), 6.f);
+    draw->AddText(text_pos, IM_COL32(255, 212, 75, 255), label);
 }
 
 void Overlays::RenderWatermark() {
