@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trigger Demo Offline</title>
+<style>
+  body { margin:24px auto; padding:0 16px; max-width:800px; color:#e5edf9; background:#101722; font:16px system-ui; }
+  .settings { display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+  input,select,button { font:inherit; padding:5px; }
+  #arena { position:relative; height:clamp(220px,52vh,420px); margin-top:16px; overflow:hidden; border:1px solid #55718f; border-radius:10px; background:#19283b; }
+  #target { position:absolute; width:64px; height:94px; transform:translate(-50%,-50%); }
+  #head,#body { position:absolute; background:#92add2; }
+  #head { top:0; left:18px; width:28px; height:28px; border-radius:50%; }
+  #body { bottom:0; width:64px; height:60px; border-radius:14px 14px 8px 8px; }
+  #target[data-zone="head"] #head,#target[data-zone="body"] #body,#target[data-zone="both"] > * { background:#5ee3ae; }
+  #status { font-weight:700; }
+</style>
+<h1>Trigger Demo Offline</h1>
+<p>Di chuột vào vùng màu xanh. Nhấn hoặc giữ phím kích hoạt để demo tự nhấp trái sau độ trễ đã chọn.</p>
+<div class="settings">
+  <label><input id="enabled" type="checkbox" checked> Bật mô phỏng</label>
+  <label>Chế độ <select id="mode"><option value="hold">Giữ phím</option><option value="toggle">Bật/tắt</option></select></label>
+  <label>Vùng <select id="zone"><option value="head">Đầu</option><option value="body">Thân</option><option value="both">Cả hai</option></select></label>
+  <label>Trễ (ms) <input id="delay" type="number" min="0" max="500" value="150" style="width:65px"></label>
+  <button id="bind" type="button">Phím: F6</button>
+  <button id="reset" type="button">Đặt lại lượt bắn</button>
+</div>
+<div id="arena" aria-label="Khu vực mục tiêu mô phỏng">
+  <div id="target" data-zone="head"><div id="head"></div><div id="body"></div></div>
+</div>
+<p id="status" role="status">Chờ kích hoạt</p>
+<p>Lượt bắn mô phỏng: <output id="shots">0</output></p>
+<script>
+const elements = Object.fromEntries(
+  ['enabled', 'mode', 'zone', 'delay', 'bind', 'reset', 'arena', 'target', 'status', 'shots']
+    .map(id => [id, document.getElementById(id)])
+);
+let hotkey = 'F6';
+let binding = false;
+let active = false;
+let hoveredZone = '';
+let pointerX = 0;
+let pointerY = 0;
+let timer = null;
+let fired = false;
+let shots = 0;
+
+function moveTarget() {
+  elements.target.style.left = (15 + Math.random() * 70) + '%';
+  elements.target.style.top = (25 + Math.random() * 50) + '%';
+}
+
+function update() {
+  const aligned = hoveredZone && (elements.zone.value === 'both' || elements.zone.value === hoveredZone);
+  if (!elements.enabled.checked || !active || !aligned) {
+    clearTimeout(timer);
+    timer = null;
+    fired = false;
+    elements.status.textContent = active && elements.enabled.checked ? 'Chờ vào vùng mục tiêu' : 'Chờ kích hoạt';
+    return;
+  }
+  if (timer !== null || fired) return;
+  elements.status.textContent = 'Đang chờ độ trễ…';
+  const delay = Math.min(500, Math.max(0, Number(elements.delay.value) || 0));
+  timer = setTimeout(() => {
+    timer = null;
+    const target = document.elementFromPoint(pointerX, pointerY);
+    if (!target || target.id !== hoveredZone || !elements.target.contains(target)) {
+      hoveredZone = '';
+      update();
+      return;
+    }
+    fired = true;
+    target.dispatchEvent(new MouseEvent('click', {
+      bubbles: true, cancelable: true, view: window,
+      button: 0, detail: 1, clientX: pointerX, clientY: pointerY
+    }));
+  }, delay);
+}
+
+function deactivate() {
+  active = false;
+  update();
+}
+
+elements.arena.addEventListener('pointermove', event => {
+  pointerX = event.clientX;
+  pointerY = event.clientY;
+  hoveredZone = ['head', 'body'].includes(event.target.id) ? event.target.id : '';
+  update();
+});
+elements.target.addEventListener('click', event => {
+  const zone = event.target.id;
+  if (!elements.enabled.checked || event.button !== 0 || !['head', 'body'].includes(zone)) return;
+  if (elements.zone.value !== 'both' && elements.zone.value !== zone) return;
+  elements.shots.value = ++shots;
+  elements.status.textContent = 'FIRED · Nhấp trái vào ' + (zone === 'head' ? 'đầu' : 'thân');
+});
+elements.arena.addEventListener('pointerleave', () => {
+  hoveredZone = '';
+  update();
+});
+elements.bind.addEventListener('click', () => {
+  deactivate();
+  binding = true;
+  elements.bind.textContent = 'Nhấn phím mới (Esc để hủy)';
+});
+window.addEventListener('keydown', event => {
+  if (binding) {
+    event.preventDefault();
+    if (event.code !== 'Escape' && event.code) hotkey = event.code;
+    binding = false;
+    elements.bind.textContent = 'Phím: ' + hotkey;
+    return;
+  }
+  if (event.code !== hotkey || !elements.enabled.checked || event.target.matches?.('input, select')) return;
+  event.preventDefault();
+  if (event.repeat) return;
+  active = elements.mode.value === 'hold' || !active;
+  update();
+});
+window.addEventListener('keyup', event => {
+  if (event.code === hotkey && elements.mode.value === 'hold') deactivate();
+});
+window.addEventListener('blur', () => {
+  hoveredZone = '';
+  deactivate();
+});
+elements.enabled.addEventListener('change', deactivate);
+elements.mode.addEventListener('change', deactivate);
+elements.zone.addEventListener('change', () => {
+  elements.target.dataset.zone = elements.zone.value;
+  deactivate();
+});
+elements.delay.addEventListener('change', deactivate);
+elements.reset.addEventListener('click', () => {
+  shots = 0;
+  elements.shots.value = 0;
+  hoveredZone = '';
+  deactivate();
+  moveTarget();
+});
+moveTarget();
+</script>
+</html>
