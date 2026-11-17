@@ -67,13 +67,12 @@ void Overlays::RenderImpl() {
 // Visual-only test: display a short-lived label when the center of the screen
 // enters the projected head region of an enemy bot. No aiming, input, or shooting.
 void Overlays::RenderBotHeadFeedback() {
-    // This is a read-only on-screen training alert; it never sends game input.
+    // Read-only target-alignment test; emits only an internal simulated M event.
     static bool was_key_held = false;
     static bool toggled = false;
     static bool previous_match = false;
     static int previous_hotkey = -1;
     static int previous_mode = -1;
-    static double banner_until = 0.0;
     static bool alert_pending = false;
     static double alert_due_at = 0.0;
 
@@ -87,7 +86,6 @@ void Overlays::RenderBotHeadFeedback() {
         toggled = false;
         previous_match = false;
         alert_pending = false;
-        banner_until = 0.0;
     }
     previous_hotkey = key;
     previous_mode = mode;
@@ -104,7 +102,6 @@ void Overlays::RenderBotHeadFeedback() {
     if (!in_game || !enabled) {
         previous_match = false;
         alert_pending = false;
-        banner_until = 0.0;
         // Toggle defaults to off when game loses focus.
         toggled = false;
         return;
@@ -115,7 +112,6 @@ void Overlays::RenderBotHeadFeedback() {
     if (!active) {
         previous_match = false;
         alert_pending = false;
-        banner_until = 0.0;
         return;
     }
 
@@ -128,7 +124,6 @@ void Overlays::RenderBotHeadFeedback() {
     if (!local.alive || (local.team != 2 && local.team != 3)) {
         previous_match = false;
         alert_pending = false;
-        banner_until = 0.0;
         return;
     }
 
@@ -180,32 +175,21 @@ void Overlays::RenderBotHeadFeedback() {
         }
     }
 
-    // Rising edge: queue one visual event when the crosshair enters a matching
-    // region. Delay is time BEFORE the FIRED label appears, not a cooldown.
+    // Rising edge: queue one simulated M event on entering the target region.
+    // Delay is time before the internal event; no OS input is produced.
     if (matched && !previous_match && !alert_pending) {
         alert_pending = true;
         alert_due_at = now + std::clamp(cfg::trigger_demo::delay_ms, 0, 500) / 1000.0;
     }
     previous_match = matched;
 
-    // The scheduled label can appear after the crosshair moves away;
-    // releasing the activation key or closing the game cancels it.
+    // Preserve the existing display-delay semantics for the test event.
+    // This increments diagnostics only; it does NOT press the M key.
     if (alert_pending && now >= alert_due_at) {
         alert_pending = false;
-        banner_until = now + 0.45;
+        ++cfg::trigger_demo::simulated_m_count;
+        cfg::trigger_demo::simulated_m_last_at = now;
     }
-    if (now >= banner_until)
-        return;
-
-    const char* label = "FIRED";
-    auto* draw = ImGui::GetForegroundDrawList();
-    const ImVec2 text_size = ImGui::CalcTextSize(label);
-    const ImVec2 text_pos{screen.x * 0.5f - text_size.x * 0.5f, screen.y * 0.5f + 42.f};
-    const ImVec2 box_a{text_pos.x - 14.f, text_pos.y - 7.f};
-    const ImVec2 box_b{text_pos.x + text_size.x + 14.f, text_pos.y + text_size.y + 7.f};
-    draw->AddRectFilled(box_a, box_b, IM_COL32(10, 10, 10, 205), 6.f);
-    draw->AddRect(box_a, box_b, IM_COL32(255, 190, 40, 230), 6.f);
-    draw->AddText(text_pos, IM_COL32(255, 212, 75, 255), label);
 }
 
 void Overlays::RenderWatermark() {
