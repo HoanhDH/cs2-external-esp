@@ -113,7 +113,7 @@ namespace cfg {
 		inline int hotkey = static_cast<int>(ImGuiKey_F6);
 		inline int zone = 0; // 0: head, 1: body, 2: either
 		inline int activation_mode = 0; // 0: Hold, 1: Toggle
-		inline int delay_ms = 150; // Simulated time between demo events (0-500ms)
+		inline int delay_ms = 150; // Delay before FIRED is displayed (0-500ms)
 	}
 
 	namespace settings {
