@@ -1,6 +1,7 @@
 #include "Menu.hpp"
 
 #include "core/engine/cache/Cache.hpp"
+#include "core/geometry/Raycast.hpp"
 #include "gui/renderer/Renderer.hpp" // Circular dependency
 #include "gui/renderer/window/Window.hpp" // Circular dependency
 #include "gui/frontend/menu/TriggerHotkey.hpp"
@@ -400,6 +401,30 @@ void Menu::RenderImpl() {
 					ImGui::Text("Simulated activations: %d", demo_count);
 					if (ImGui::Button("Reset counter"))
 						demo_count = 0;
+
+					ImGui::Separator();
+					ImGui::TextUnformatted("Raycast laboratory (simulated obstacle)");
+					ImGui::TextDisabled("Uses test geometry, NOT collision data from CS2.");
+					static bool demo_wall_enabled = true;
+					static float demo_wall_height = 1.35f;
+					static float demo_wall_offset = 0.0f;
+					ImGui::Checkbox("Place test wall", &demo_wall_enabled);
+					ImGui::SliderFloat("Wall height", &demo_wall_height, 0.0f, 2.5f, "%.2f m");
+					ImGui::SliderFloat("Wall lateral offset", &demo_wall_offset, -2.0f, 2.0f, "%.2f m");
+					const demo_raycast::Point3 eye{0.0f, 0.0f, 1.60f};
+					const demo_raycast::Point3 target_head{10.0f, 0.0f, 1.60f};
+					const demo_raycast::Point3 target_body{10.0f, 0.0f, 1.05f};
+					const demo_raycast::Box3 wall{
+						{4.75f, demo_wall_offset - 0.65f, 0.0f},
+						{5.25f, demo_wall_offset + 0.65f, demo_wall_height}
+					};
+					const bool head_clear = !demo_wall_enabled ||
+						demo_raycast::ClearLineOfSight(eye, target_head, wall);
+					const bool body_clear = !demo_wall_enabled ||
+						demo_raycast::ClearLineOfSight(eye, target_body, wall);
+					ImGui::Text("Test head visibility: %s", head_clear ? "CLEAR" : "BLOCKED");
+					ImGui::Text("Test body visibility: %s", body_clear ? "CLEAR" : "BLOCKED");
+					ImGui::TextDisabled("Independent raycast test; not wired into live game detection.");
 
 					ImGui::Separator();
 					ImGui::TextUnformatted("Live opponent recognition (read-only)");
