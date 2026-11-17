@@ -106,6 +106,14 @@ namespace cfg {
 		}
 	}
 
+	// Local-only UI prototype. No game memory, targeting, or input synthesis.
+	namespace trigger_demo {
+		inline bool enabled = false;
+		inline int hotkey = static_cast<int>(ImGuiKey_F6);
+		inline int zone = 0; // 0: head, 1: body, 2: either
+		inline int cooldown_ms = 150;
+	}
+
 	namespace settings {
 		inline bool watermark = true;
 		inline bool streamproof = false;

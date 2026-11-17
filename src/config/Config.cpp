@@ -121,6 +121,15 @@ bool Config::ReadImpl() {
 		cfg::world::velocity::pos = JsonToVec2(data["world"]["velocity"], "pos", { 10.f, 400.f });
 		cfg::world::velocity::size = JsonToVec2(data["world"]["velocity"], "size", { 400.f, 100.f });
 
+		// Local-only trigger settings demo.
+		if (data.contains("trigger_demo") && data["trigger_demo"].is_object()) {
+			const auto& demo = data["trigger_demo"];
+			cfg::trigger_demo::enabled = demo.value("enabled", false);
+			cfg::trigger_demo::hotkey = std::clamp(demo.value("hotkey", static_cast<int>(ImGuiKey_F6)), static_cast<int>(ImGuiKey_NamedKey_BEGIN), static_cast<int>(ImGuiKey_NamedKey_END) - 1);
+			cfg::trigger_demo::zone = std::clamp(demo.value("zone", 0), 0, 2);
+			cfg::trigger_demo::cooldown_ms = std::clamp(demo.value("cooldown_ms", 150), 50, 1000);
+		}
+
 		// utils
 		//cfg::settings::console = data["utils"].value("console", true);
 		cfg::settings::watermark = data["utils"].value("watermark", true);
@@ -232,6 +241,11 @@ bool Config::WriteImpl() {
 
 	ColorToJson(fcol, "c4_team", cfg::esp::colors::flags::c4_team);
 	ColorToJson(fcol, "c4_enemy", cfg::esp::colors::flags::c4_enemy);
+
+	data["trigger_demo"]["enabled"] = cfg::trigger_demo::enabled;
+	data["trigger_demo"]["hotkey"] = cfg::trigger_demo::hotkey;
+	data["trigger_demo"]["zone"] = cfg::trigger_demo::zone;
+	data["trigger_demo"]["cooldown_ms"] = cfg::trigger_demo::cooldown_ms;
 
 	// utils
 	//data["utils"]["console"] = cfg::settings::console;

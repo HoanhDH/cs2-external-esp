@@ -289,6 +289,49 @@ void Menu::RenderImpl() {
 					}
 					ImGui::EndDisabled();
 				}
+				else if (active_tab == Tab::TRIGGER_DEMO)
+				{
+					ImGui::TextUnformatted("Trigger configuration - local demo");
+					ImGui::Separator();
+					ImGui::Checkbox("Enable prototype", &cfg::trigger_demo::enabled);
+					ImGui::TextDisabled("Does not interact with CS2 or generate mouse clicks.");
+					const char* zones[] = { "Head", "Body", "Head + Body" };
+					ImGui::Combo("Target zone", &cfg::trigger_demo::zone, zones, IM_ARRAYSIZE(zones));
+					ImGui::SliderInt("Cooldown (ms)", &cfg::trigger_demo::cooldown_ms, 50, 1000);
+
+					static bool capturing_key = false;
+					const ImGuiKey current_key = static_cast<ImGuiKey>(cfg::trigger_demo::hotkey);
+					if (ImGui::Button(capturing_key ? "Press a key (Esc cancels)..." : "Assign hotkey"))
+						capturing_key = true;
+					ImGui::SameLine();
+					ImGui::Text("%s", ImGui::GetKeyName(current_key));
+					if (capturing_key) {
+						for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_NamedKey_END; ++k) {
+							const auto key = static_cast<ImGuiKey>(k);
+							if (!ImGui::IsKeyPressed(key, false)) continue;
+							if (key != ImGuiKey_Escape && key != ImGuiKey_Insert && key != ImGuiKey_End)
+								cfg::trigger_demo::hotkey = k;
+							capturing_key = false;
+							break;
+						}
+					}
+					const bool key_held = !capturing_key && ImGui::IsKeyDown(static_cast<ImGuiKey>(cfg::trigger_demo::hotkey));
+					ImGui::Text("Key state: %s", key_held ? "Pressed" : "Released");
+					ImGui::Separator();
+					ImGui::TextUnformatted("Practice preview (simulated coordinates)");
+					static float sample_x = 0.5f;
+					static float sample_y = 0.5f;
+					ImGui::SliderFloat("Dummy X", &sample_x, 0.0f, 1.0f);
+					ImGui::SliderFloat("Dummy Y", &sample_y, 0.0f, 1.0f);
+					// Move a dummy vertically and preview head/body hit regions independently.
+					const float dx = std::abs(sample_x - 0.5f);
+					const bool head_match = dx < 0.05f && std::abs((sample_y - 0.12f) - 0.5f) < 0.05f;
+					const bool body_match = dx < 0.10f && std::abs((sample_y + 0.07f) - 0.5f) < 0.12f;
+					const bool zone_match = cfg::trigger_demo::zone == 0 ? head_match :
+						(cfg::trigger_demo::zone == 1 ? body_match : (head_match || body_match));
+					const bool matching = cfg::trigger_demo::enabled && zone_match && key_held;
+					ImGui::Text("Demo status: %s", matching ? "MATCH (preview only)" : "Idle");
+				}
 				else if (active_tab == Tab::SETTINGS)
 				{
 					ImGui::Text("Misc");

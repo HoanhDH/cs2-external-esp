@@ -4,7 +4,8 @@
 enum Tab {
     PLAYER,
     WORLD,
-    SETTINGS
+    SETTINGS,
+    TRIGGER_DEMO
 };
 
 struct TabItem
@@ -18,7 +19,8 @@ static const TabItem tabs[] =
 {
     { Tab::PLAYER,      "Player",   Icons::PERSON },
     { Tab::WORLD,       "World",    Icons::GLOBE },
-    { Tab::SETTINGS,    "Settings", Icons::SETTINGS }
+    { Tab::SETTINGS,    "Settings", Icons::SETTINGS },
+    { Tab::TRIGGER_DEMO, "Trigger Demo", Icons::SETTINGS }
 };
 
 class Menu {
