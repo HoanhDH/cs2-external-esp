@@ -294,7 +294,8 @@ void Menu::RenderImpl() {
 					ImGui::TextUnformatted("Trigger Demo - local preview");
 					ImGui::Separator();
 					ImGui::Checkbox("Enable prototype", &cfg::trigger_demo::enabled);
-					ImGui::TextDisabled("Preview only: no CS2 target scan or automatic mouse clicks.");
+					ImGui::Checkbox("Show FIRED on bot head alignment", &cfg::trigger_demo::live_head_feedback);
+					ImGui::TextDisabled("Read-only visual alert; never clicks or fires a weapon.");
 					const char* zones[] = { "Head", "Body", "Head + Body" };
 					ImGui::Combo("Target zone", &cfg::trigger_demo::zone, zones, IM_ARRAYSIZE(zones));
 					const char* modes[] = { "Hold", "Toggle" };
