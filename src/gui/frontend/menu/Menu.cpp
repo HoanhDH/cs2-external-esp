@@ -5,6 +5,7 @@
 #include "gui/renderer/Renderer.hpp" // Circular dependency
 #include "gui/renderer/window/Window.hpp" // Circular dependency
 #include "gui/frontend/menu/TriggerHotkey.hpp"
+#include "practice/ClickPractice.hpp"
 #include "assets/fonts/Icons.h";
 
 
@@ -368,6 +369,21 @@ void Menu::RenderImpl() {
 					ImGui::TextDisabled("This menu preview is separate from the in-game alert.");
 
 					ImGui::Separator();
+					static bool practice_failed = false;
+					ImGui::BeginDisabled(!cfg::trigger_demo::enabled || capturing_key);
+					if (ImGui::Button("Open offline click practice")) {
+						const click_practice::Settings settings{
+							trigger_hotkey::ToVirtualKey(active_key), ImGui::GetKeyName(active_key),
+							cfg::trigger_demo::delay_ms, cfg::trigger_demo::zone,
+							cfg::trigger_demo::activation_mode == 1
+						};
+						practice_failed = !click_practice::Run(Window::hwnd, settings);
+						demo_pending = false;
+						previous_demo_match = false;
+						toggle_active = false;
+					}
+					ImGui::EndDisabled();
+					if (practice_failed) ImGui::TextUnformatted("Could not open the practice window.");
 					ImGui::TextUnformatted("Practice preview (simulated coordinates)");
 					static float sample_x = 0.5f;
 					static float sample_y = 0.5f;

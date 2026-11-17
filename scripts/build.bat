@@ -72,7 +72,8 @@ set SRCS=scripts\msvc\compatibility.cpp ^
          src/gui/frontend/theme/Theme.cpp ^
          src/gui/renderer/Renderer.cpp ^
          src/gui/renderer/window/Window.cpp ^
-         src/main.cpp
+         src/main.cpp ^
+         src/gui/frontend/menu/practice/ClickPractice.rc
 
 
 set SOLIS_C=src/external/Solis/runtime/solis.c ^
