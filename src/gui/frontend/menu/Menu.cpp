@@ -360,6 +360,34 @@ void Menu::RenderImpl() {
 					ImGui::Text("Simulated activations: %d", demo_count);
 					if (ImGui::Button("Reset counter"))
 						demo_count = 0;
+
+					ImGui::Separator();
+					ImGui::TextUnformatted("Live opponent recognition (read-only)");
+					ImGui::TextDisabled("Uses current CS2 player snapshot; never clicks or aims.");
+					const Snapshot game_snapshot = Cache::CopySnapshot();
+					const bool local_ready = game_snapshot.local.index >= 0 &&
+						(game_snapshot.local.team == 2 || game_snapshot.local.team == 3);
+					if (!local_ready) {
+						ImGui::TextUnformatted("Status: waiting for local player/team data...");
+					} else {
+						int opponents_alive = 0;
+						int enemy_bots_alive = 0;
+						for (const auto& participant : game_snapshot.players) {
+							if (!participant.alive || participant.localplayer)
+								continue;
+							if (participant.team != 2 && participant.team != 3)
+								continue;
+							if (participant.team == game_snapshot.local.team)
+								continue;
+							++opponents_alive;
+							if (participant.bot)
+								++enemy_bots_alive;
+						}
+						ImGui::Text("Opponents alive: %d", opponents_alive);
+						ImGui::Text("Enemy bots alive: %d", enemy_bots_alive);
+						ImGui::Text("Detection: %s", opponents_alive > 0 ? "OPPONENTS FOUND" : "No opponents in snapshot");
+						ImGui::TextDisabled("Counts update from game data; these do not validate line of sight.");
+					}
 				}
 				else if (active_tab == Tab::SETTINGS)
 				{
