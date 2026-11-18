@@ -19,14 +19,22 @@
 */
 
 #include <iostream>
+#include <string_view>
+#include "gui/frontend/menu/practice/ClickPractice.hpp"
 
 #include "core/engine/Engine.hpp"
 #include "gui/renderer/Renderer.hpp"
 
 #include <external/exception.hpp>
 
-int main()
+int main(int argc, char* argv[])
 {
+    if (argc == 2 && std::string_view(argv[1]) == "--trigger-demo") {
+        if (click_practice::Run(nullptr)) return 0;
+        std::cerr << "Could not open the offline click practice window.\n";
+        return 1;
+    }
+
     c_exception_handler::setup();
 
     LogHelper::Init();

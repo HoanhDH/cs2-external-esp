@@ -2,6 +2,18 @@
 
 Simple external ESP for Counter-Strike 2. After years of development the codebase has been modernized for clarity and ease of use, featuring a redesigned interface, noticeable performance improvements, several quality-of-life additions, and automatic offset scanning to help maintain compatibility through game updates.
 
+## Offline click practice
+
+Run `cs2-external-esp.exe --trigger-demo` to open the native practice window. Hold F6 over Head or Body for 150 ms to send one left click to that button. Release F6 before the next click. The counter updates when the button receives the click. To use your configured hotkey, delay, zone and activation mode, choose **Open offline click practice** in the **Trigger Demo** tab.
+
+To build just the offline demo from the repository root using a Visual Studio Developer Command Prompt:
+
+```bat
+rc /fo trigger-demo.res src\gui\frontend\menu\practice\ClickPractice.rc
+cl /EHsc /std:c++20 tools\trigger-demo.cpp trigger-demo.res user32.lib
+trigger-demo.exe
+```
+
 ## Showcase
 
 > Click the picture below to go to the showcase video

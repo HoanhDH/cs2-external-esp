@@ -1,0 +1,14 @@
+#include <windows.h>
+#include "Resource.h"
+
+IDD_CLICK_PRACTICE DIALOGEX 0, 0, 230, 128
+STYLE DS_MODALFRAME | DS_CENTER | DS_SETFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Offline click practice"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT       "", IDC_PRACTICE_HELP, 8, 8, 214, 25
+    PUSHBUTTON  "Head", IDC_PRACTICE_HEAD, 92, 34, 46, 18
+    PUSHBUTTON  "Body", IDC_PRACTICE_BODY, 76, 55, 78, 28
+    LTEXT       "Clicks received: 0", IDC_PRACTICE_STATUS, 8, 94, 214, 10
+    PUSHBUTTON  "Close", IDCANCEL, 172, 106, 50, 14
+END

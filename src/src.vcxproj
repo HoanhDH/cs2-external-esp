@@ -308,6 +308,9 @@
     <ClInclude Include="gui\renderer\window\Window.hpp" />
     <ClInclude Include="core\engine\classes\Weapon.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="gui\frontend\menu\practice\ClickPractice.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
