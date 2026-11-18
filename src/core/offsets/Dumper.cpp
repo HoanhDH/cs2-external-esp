@@ -51,23 +51,20 @@ bool Dumper::InitImpl() {
     offsets::localPlayerController = temp - client.base;
     LOGF(VERBOSE, "Found 'localPlayerController' offset at 0x{:X}", offsets::localPlayerController);
 
-    // C4
-    if (!(temp = Scan(offsets::signatures::plantedC4, client))) {
-        LOGF(FATAL, "Could not find offset for 'weaponC4'");
-        return false;
-    }
+    // C4 data is optional. Keep each feature available independently.
+    temp = Scan(offsets::signatures::plantedC4, client);
+    offsets::plantedC4 = temp ? temp - client.base : 0;
+    if (offsets::plantedC4)
+        LOGF(VERBOSE, "Found 'plantedC4' offset at 0x{:X}", offsets::plantedC4);
+    else
+        LOGF(WARNING, "Missing 'plantedC4' offset; planted bomb location and timer unavailable.");
 
-    offsets::plantedC4 = temp - client.base;
-    LOGF(VERBOSE, "Found 'weaponC4' offset at 0x{:X}", offsets::plantedC4);
-
-    // C4 carrier pointer
-    if (!(temp = Scan(offsets::signatures::weaponC4, client))) {
-        LOGF(FATAL, "Could not find offset for 'weaponC4 carrier'");
-        return false;
-    }
-
-    offsets::weaponC4 = temp - client.base;
-    LOGF(VERBOSE, "Found 'weaponC4 carrier' offset at 0x{:X}", offsets::weaponC4);
+    temp = Scan(offsets::signatures::weaponC4, client);
+    offsets::weaponC4 = temp ? temp - client.base : 0;
+    if (offsets::weaponC4)
+        LOGF(VERBOSE, "Found 'weaponC4' carrier offset at 0x{:X}", offsets::weaponC4);
+    else
+        LOGF(WARNING, "Missing 'weaponC4' offset; bomb carrier indicator unavailable.");
 
 #if 0
     // Local Player Pawn (tbh idk how to read it :1)
